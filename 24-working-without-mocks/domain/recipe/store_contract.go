@@ -14,6 +14,7 @@ type Store interface {
 
 type StoreContract struct {
 	NewStore func() Store
+	Cleanup func()
 }
 
 
