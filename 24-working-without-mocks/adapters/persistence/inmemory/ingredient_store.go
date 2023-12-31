@@ -9,6 +9,10 @@ type IngredientStore struct {
 	Ingredients []ingredients.Ingredient
 }
 
+func NewIngredientStore() *IngredientStore {
+	return &IngredientStore{}
+}
+
 func (s *IngredientStore) GetIngredients(ctx context.Context) ([]ingredients.Ingredient, error) {
 	return s.Ingredients, nil
 }
@@ -16,4 +20,7 @@ func (s *IngredientStore) GetIngredients(ctx context.Context) ([]ingredients.Ing
 func (s *IngredientStore) Store(ctx context.Context, ingredients ...ingredients.Ingredient) error {
 	s.Ingredients = append(s.Ingredients, ingredients...)
 	return nil
+}
+
+func (i *IngredientStore) Close() {
 }
