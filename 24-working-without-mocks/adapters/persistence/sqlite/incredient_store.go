@@ -42,10 +42,7 @@ func (i IngredientStore) GetIngredients(ctx context.Context) ([]ingredients.Ingr
 	var allIngredients []ingredients.Ingredient
 
 	for _, ingredient := range all {
-		allIngredients = append(allIngredients, ingredients.Ingredient {
-			Name: ingredient.Name,
-			Quantity: ingredient.Quantity,
-		})
+		allIngredients = append(allIngredients, mapDBIngredientToDomain(ingredient))
 	}
 
 	return allIngredients, nil
@@ -68,4 +65,11 @@ func (i IngredientStore) Store(ctx context.Context, ingredients ...ingredients.I
 	}
 
 	return nil
+}
+
+func mapDBIngredientToDomain(dbIngredient *ent.Ingredient) ingredients.Ingredient {
+	return ingredients.Ingredient{
+		Name:     dbIngredient.Name,
+		Quantity: dbIngredient.Quantity,
+	}
 }
