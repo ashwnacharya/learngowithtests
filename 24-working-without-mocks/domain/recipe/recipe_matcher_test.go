@@ -32,24 +32,24 @@ var (
 
 func TestRecipeMatcher(t *testing.T) {
 	t.Run("with in memory store", func(t *testing.T) {
-		RecipeMatcherTest(t, func() CloseAbleStore {
+		RecipeMatcherTest(t, func() CloseableStore {
 			return inmemory.NewIngredientStore()
 		})
 	})
 
 	t.Run("with sqlite", func(t *testing.T) {
-		RecipeMatcherTest(t, func() CloseAbleStore {
+		RecipeMatcherTest(t, func() CloseableStore {
 			return sqlite.NewIngredientStore()
 		})
 	})
 }
 
-type CloseAbleStore interface {
+type CloseableStore interface {
 	recipe.Store
 	Close()
 }
 
-func RecipeMatcherTest(t *testing.T, newStore func() CloseAbleStore) {
+func RecipeMatcherTest(t *testing.T, newStore func() CloseableStore) {
 	t.Run("if we have no ingredients we can't make anything", func(t *testing.T) {
 		store := newStore()
 		t.Cleanup(store.Close)

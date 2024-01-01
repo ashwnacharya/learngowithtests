@@ -53,7 +53,13 @@ func (i IngredientStore) GetIngredients(ctx context.Context) ([]ingredients.Ingr
 
 func (i IngredientStore) Store(ctx context.Context, ingredients ...ingredients.Ingredient) error {
 	for _, ingredient := range ingredients {
-		_, err := i.client.Ingredient.Create().SetName(ingredient.Name).SetQuantity(ingredient.Quantity).Save(ctx)
+		err := i.client.Ingredient.
+			Create().
+			SetName(ingredient.Name).
+			SetQuantity(ingredient.Quantity).
+			OnConflict().
+			AddQuantity(ingredient.Quantity).
+			Exec(ctx)
 
 		if err != nil {
 			log.Fatalf("failed storing ingredients: %v", err)
