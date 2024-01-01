@@ -1,4 +1,4 @@
-package recipe_test
+package planner_test
 
 import (
 	"context"
@@ -6,29 +6,11 @@ import (
 	"github.com/ashwnacharya/working-without-mocks/adapters/persistence/inmemory"
 	"github.com/ashwnacharya/working-without-mocks/adapters/persistence/sqlite"
 	"github.com/ashwnacharya/working-without-mocks/domain/ingredients"
+	"github.com/ashwnacharya/working-without-mocks/domain/planner"
 	"github.com/ashwnacharya/working-without-mocks/domain/recipe"
 	"testing"
 )
 
-
-var (
-	bananaBread = recipe.Recipe{
-		Name: "Banana Bread",
-		Ingredients: []ingredients.Ingredient{
-			{Name: "Bananas", Quantity: 2},
-			{Name: "Flour", Quantity: 1},
-			{Name: "Eggs", Quantity: 2},
-		},
-	}
-	bananaMilkshake = recipe.Recipe{
-		Name: "Banana Milkshake",
-		Ingredients: []ingredients.Ingredient{
-			{Name: "Bananas", Quantity: 2},
-			{Name: "Milk", Quantity: 1},
-		},
-	}
-	recipeStore = inmemory.RecipeStore{Recipes: []recipe.Recipe{bananaBread, bananaMilkshake}}
-)
 
 func TestRecipeMatcher(t *testing.T) {
 	t.Run("with in memory store", func(t *testing.T) {
@@ -45,7 +27,7 @@ func TestRecipeMatcher(t *testing.T) {
 }
 
 type CloseableStore interface {
-	recipe.Store
+	planner.Store
 	Close()
 }
 
@@ -73,11 +55,11 @@ func RecipeMatcherTest(t *testing.T, newStore func() CloseableStore) {
 		store := newStore()
 		t.Cleanup(store.Close)
 
-		store.Store(
+		assert.NoError(t, store.Store(
 			context.Background(),
 			ingredients.Ingredient{Name: "Bananas", Quantity: 2},
 			ingredients.Ingredient{Name: "Milk", Quantity: 1},
-		)
+		))
 		assertAvailableRecipes(t, store, []recipe.Recipe{bananaMilkshake})
 	})
 
@@ -85,21 +67,21 @@ func RecipeMatcherTest(t *testing.T, newStore func() CloseableStore) {
 		store := newStore()
 		t.Cleanup(store.Close)
 
-		store.Store(
+		assert.NoError(t, store.Store(
 			context.Background(),
 			ingredients.Ingredient{Name: "Bananas", Quantity: 2},
 			ingredients.Ingredient{Name: "Flour", Quantity: 1},
 			ingredients.Ingredient{Name: "Eggs", Quantity: 2},
 			ingredients.Ingredient{Name: "Milk", Quantity: 1},
-		)
+		))
 		assertAvailableRecipes(t, store, []recipe.Recipe{bananaMilkshake, bananaBread})
 	})
 
 }
 
-func assertAvailableRecipes(t *testing.T, ingredientStore recipe.Store, expectedRecipes []recipe.Recipe) {
+func assertAvailableRecipes(t *testing.T, ingredientStore planner.Store, expectedRecipes []recipe.Recipe) {
 	t.Helper()
-	suggestions, _ := recipe.NewMatcher(recipeStore, ingredientStore).SuggestRecipes(context.Background())
+	suggestions, _ := planner.New(recipeStore, ingredientStore).SuggestRecipes(context.Background())
 
 	// create a map to count occurrences of each recipe in the suggestions
 	suggestionCounts := make(map[string]int)
@@ -121,3 +103,22 @@ func assertAvailableRecipes(t *testing.T, ingredientStore recipe.Store, expected
 	// check that the number of suggestions matches the expected number of recipes
 	assert.Equal(t, len(suggestions), len(expectedRecipes))
 }
+
+var (
+	bananaBread = recipe.Recipe{
+		Name: "Banana Bread",
+		Ingredients: []ingredients.Ingredient{
+			{Name: "Bananas", Quantity: 2},
+			{Name: "Flour", Quantity: 1},
+			{Name: "Eggs", Quantity: 2},
+		},
+	}
+	bananaMilkshake = recipe.Recipe{
+		Name: "Banana Milkshake",
+		Ingredients: []ingredients.Ingredient{
+			{Name: "Bananas", Quantity: 2},
+			{Name: "Milk", Quantity: 1},
+		},
+	}
+	recipeStore = inmemory.RecipeStore{Recipes: []recipe.Recipe{bananaBread, bananaMilkshake}}
+)
