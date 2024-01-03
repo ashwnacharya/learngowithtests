@@ -12,17 +12,34 @@ import (
 	"github.com/ashwnacharya/working-without-mocks/domain/recipe"
 )
 
+type RecipeMatcherTest struct {
+	NewIngredientStore func() planner.CloseableIngredientStore
+	NewRecipeBook      func() planner.CloseableRecipeBook
+}
+
 func TestRecipeMatcher(t *testing.T) {
 	t.Run("with in memory store", func(t *testing.T) {
-		RecipeMatcherTest(t, func() CloseableStore {
-			return inmemory.NewIngredientStore()
-		})
+		RecipeMatcherTest {
+			NewRecipeBook: func() planner.CloseableRecipeBook {
+				return inmemory.NewRecipeStore()
+			},
+			NewIngredientStore: func() planner.CloseableIngredientStore {
+				return inmemory.NewIngredientStore()
+			},
+		}.Test(t)
 	})
 
 	t.Run("with sqlite", func(t *testing.T) {
-		RecipeMatcherTest(t, func() CloseableStore {
-			return sqlite.NewIngredientStore()
-		})
+		if !testing.Short() {
+			RecipeMatcherTest{
+				NewRecipeBook: func() planner.CloseableRecipeBook {
+					return inmemory.NewRecipeStore()
+				},
+				NewIngredientStore: func() planner.CloseableIngredientStore {
+					return sqlite.NewIngredientStore()
+				},
+			}.Test(t)
+		}
 	})
 }
 
@@ -31,16 +48,23 @@ type CloseableStore interface {
 	Close()
 }
 
-func RecipeMatcherTest(t *testing.T, newStore func() CloseableStore) {
+func (r RecipeMatcherTest) Test(t *testing.T) {	
 	t.Run("if we have no ingredients we can't make anything", func(t *testing.T) {
-		store := newStore()
+		store := r.NewIngredientStore()
 		t.Cleanup(store.Close)
-		assertAvailableRecipes(t, store, []recipe.Recipe{})
+		recipeBook := r.NewRecipeBook()
+		assert.NoError(t, recipeBook.AddRecipes(context.Background(), bananaBread, bananaMilkshake))
+		t.Cleanup(recipeBook.Close)
+		assertAvailableRecipes(t, store, recipeBook, []recipe.Recipe{})
 	})
 
 	t.Run("if we have the ingredients for banana bread we can make it", func(t *testing.T) {
-		store := newStore()
+		store := r.NewIngredientStore()
 		t.Cleanup(store.Close)
+
+		recipeBook := r.NewRecipeBook()
+		assert.NoError(t, recipeBook.AddRecipes(context.Background(), bananaBread, bananaMilkshake))
+		t.Cleanup(recipeBook.Close)
 
 		assert.NoError(t, store.Store(
 			context.Background(),
@@ -48,24 +72,32 @@ func RecipeMatcherTest(t *testing.T, newStore func() CloseableStore) {
 			ingredients.Ingredient{Name: "Flour", Quantity: 1},
 			ingredients.Ingredient{Name: "Eggs", Quantity: 2},
 		))
-		assertAvailableRecipes(t, store, []recipe.Recipe{bananaBread})
+		assertAvailableRecipes(t, store, recipeBook, []recipe.Recipe{bananaBread})
 	})
 
 	t.Run("if we have bananas and milk, we can make banana milkshake", func(t *testing.T) {
-		store := newStore()
+		store := r.NewIngredientStore()
 		t.Cleanup(store.Close)
+
+		recipeBook := r.NewRecipeBook()
+		assert.NoError(t, recipeBook.AddRecipes(context.Background(), bananaBread, bananaMilkshake))
+		t.Cleanup(recipeBook.Close)
 
 		assert.NoError(t, store.Store(
 			context.Background(),
 			ingredients.Ingredient{Name: "Bananas", Quantity: 2},
 			ingredients.Ingredient{Name: "Milk", Quantity: 1},
 		))
-		assertAvailableRecipes(t, store, []recipe.Recipe{bananaMilkshake})
+		assertAvailableRecipes(t, store, recipeBook, []recipe.Recipe{bananaMilkshake})
 	})
 
 	t.Run("if we have ingredients for banana bread and milkshake, we can make both", func(t *testing.T) {
-		store := newStore()
+		store := r.NewIngredientStore()
 		t.Cleanup(store.Close)
+
+		recipeBook := r.NewRecipeBook()
+		assert.NoError(t, recipeBook.AddRecipes(context.Background(), bananaBread, bananaMilkshake))
+		t.Cleanup(recipeBook.Close)
 
 		assert.NoError(t, store.Store(
 			context.Background(),
@@ -74,12 +106,12 @@ func RecipeMatcherTest(t *testing.T, newStore func() CloseableStore) {
 			ingredients.Ingredient{Name: "Eggs", Quantity: 2},
 			ingredients.Ingredient{Name: "Milk", Quantity: 1},
 		))
-		assertAvailableRecipes(t, store, []recipe.Recipe{bananaMilkshake, bananaBread})
+		assertAvailableRecipes(t, store, recipeBook, []recipe.Recipe{bananaMilkshake, bananaBread})
 	})
 
 }
 
-func assertAvailableRecipes(t *testing.T, ingredientStore planner.IngredientStore, expectedRecipes []recipe.Recipe) {
+func assertAvailableRecipes(t *testing.T, ingredientStore planner.IngredientStore, recipeStore planner.RecipeBook, expectedRecipes []recipe.Recipe) {
 	t.Helper()
 	suggestions, _ := planner.New(recipeStore, ingredientStore).SuggestRecipes(context.Background())
 
