@@ -2,6 +2,7 @@ package planner
 
 import (
 	"context"
+
 	"github.com/ashwnacharya/working-without-mocks/domain/ingredients"
 	"github.com/ashwnacharya/working-without-mocks/domain/recipe"
 )
@@ -11,22 +12,22 @@ type Book interface {
 }
 
 type Planner struct {
-	recipeBook Book
-	ingredientStore Store
+	recipeBook      Book
+	ingredientStore IngredientStore
 }
 
-func New(recipeBook Book, ingredientStore Store) *Planner {
+func New(recipeBook Book, ingredientStore IngredientStore) *Planner {
 	return &Planner{recipeBook: recipeBook, ingredientStore: ingredientStore}
 }
 
 func (p Planner) SuggestRecipes(ctx context.Context) ([]recipe.Recipe, error) {
-	
+
 	availableIngredients, err := p.ingredientStore.GetIngredients(ctx)
 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var suggestions []recipe.Recipe
 
 	for _, recipe := range p.recipeBook.GetRecipes() {
@@ -46,4 +47,3 @@ func haveIngredients(availableIngredients ingredients.Ingredients, recipe recipe
 	}
 	return true
 }
-

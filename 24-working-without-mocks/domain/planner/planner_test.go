@@ -2,15 +2,15 @@ package planner_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/alecthomas/assert/v2"
 	"github.com/ashwnacharya/working-without-mocks/adapters/persistence/inmemory"
 	"github.com/ashwnacharya/working-without-mocks/adapters/persistence/sqlite"
 	"github.com/ashwnacharya/working-without-mocks/domain/ingredients"
 	"github.com/ashwnacharya/working-without-mocks/domain/planner"
 	"github.com/ashwnacharya/working-without-mocks/domain/recipe"
-	"testing"
 )
-
 
 func TestRecipeMatcher(t *testing.T) {
 	t.Run("with in memory store", func(t *testing.T) {
@@ -27,7 +27,7 @@ func TestRecipeMatcher(t *testing.T) {
 }
 
 type CloseableStore interface {
-	planner.Store
+	planner.IngredientStore
 	Close()
 }
 
@@ -79,7 +79,7 @@ func RecipeMatcherTest(t *testing.T, newStore func() CloseableStore) {
 
 }
 
-func assertAvailableRecipes(t *testing.T, ingredientStore planner.Store, expectedRecipes []recipe.Recipe) {
+func assertAvailableRecipes(t *testing.T, ingredientStore planner.IngredientStore, expectedRecipes []recipe.Recipe) {
 	t.Helper()
 	suggestions, _ := planner.New(recipeStore, ingredientStore).SuggestRecipes(context.Background())
 
